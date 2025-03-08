@@ -1,74 +1,72 @@
-// Temporarily mock API responses without Axios
-export const login = async (username: string, password: string, userType: string) => {
-  // Simulate a delay like a real API call
-  await new Promise((resolve) => setTimeout(resolve, 500));
+// Mock API_URL since no real backend yet
+const API_URL = "https://mock-api.example.com/api";
 
-  // Mock response based on dummy credentials
-  if (username === "test" && password === "pass") {
-    const mockResponse = {
-      access: "fake-access-token",
-      refresh: "fake-refresh-token",
-      user_type: userType.toUpperCase(),
-    };
-    localStorage.setItem("access_token", mockResponse.access);
-    localStorage.setItem("refresh_token", mockResponse.refresh);
-    return mockResponse;
-  } else {
-    throw new Error("Invalid credentials");
-  }
+// Mock axios-like response structure
+const mockResponse = <T>(data: T) => ({ data });
+
+// Mock token interceptor
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Mock other functions
+// Student Results
 export const getStudentResults = async () => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return {
-    data: [
-      { subject: "Math", score: 85 },
-      { subject: "Science", score: 90 },
+  return mockResponse({
+    results: [
+      { student_id: "S001", subject: "Math", score: 85, grade: "B+" },
+      { student_id: "S002", subject: "Science", score: 92, grade: "A" },
     ],
-  };
+  });
 };
 
+// Upload Results
 export const uploadResults = async (file: File) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { message: "Results uploaded successfully" } };
+  return mockResponse({ message: "Results uploaded successfully" });
 };
 
+// Get All Results
 export const getAllResults = async () => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return {
-    data: [
-      { student: "John", subject: "Math", score: 85 },
-      { student: "Jane", subject: "Science", score: 88 },
+  return mockResponse({
+    results: [
+      { student_id: "S001", subject: "Math", score: 85, grade: "B+" },
+      { student_id: "S002", subject: "Science", score: 92, grade: "A" },
     ],
-  };
+  });
 };
 
+// Submit Complaint
 export const submitComplaint = async (subject: string, content: string) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { message: "Complaint submitted" } };
+  return mockResponse({ message: "Complaint submitted successfully" });
 };
 
+// Get Complaints
 export const getComplaints = async () => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return {
-    data: [
-      { id: "1", subject: "Issue 1", content: "Details", resolved: false },
-    ],
-  };
+  return mockResponse([
+    { id: 1, student: "S001", subject: "Math", content: "Score seems off", created_at: "2025-03-05T10:00:00Z", resolved: false },
+    { id: 2, student: "S002", subject: "Science", content: "Missing grade", created_at: "2025-03-05T11:00:00Z", resolved: true },
+  ]);
 };
 
+// Resolve Complaint
 export const resolveComplaint = async (complaintId: string) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { message: `Complaint ${complaintId} resolved` } };
+  return mockResponse({ message: "Complaint resolved" });
 };
 
+// Upload Staff
 export const uploadStaff = async (file: File) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { message: "Staff uploaded successfully" } };
+  return mockResponse({ message: "Staff uploaded successfully" });
 };
 
+// Upload Students
 export const uploadStudents = async (file: File) => {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  return { data: { message: "Students uploaded successfully" } };
+  return mockResponse({ message: "Students uploaded successfully" });
 };
