@@ -16,6 +16,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Debug Credentials
+        run: |
+          echo "Access Key ID: ${{ secrets.AWS_ACCESS_KEY_ID }}"
+          echo "Secret Access Key length: $(echo -n ${{ secrets.AWS_SECRET_ACCESS_KEY }} | wc -c)"
+          aws sts get-caller-identity --region us-east-1 || echo "STS call failed"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
