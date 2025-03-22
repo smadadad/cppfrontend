@@ -28,8 +28,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AZURE_ACR_PASSWORD }}
-          aws-region: us-east-1  # Adjust region
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 
 
       # Check and create S3 bucket
       - name: Ensure S3 Bucket Exists
@@ -45,7 +45,7 @@ jobs:
       # Check and create EC2 instance
       - name: Ensure EC2 Instance Exists
         run: |
-          INSTANCE_NAME="my-app-ec2"
+          INSTANCE_NAME="resultportal-ec2"
           # Check if instance exists with tag
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running" \
@@ -57,11 +57,11 @@ jobs:
           else
             # Create security group if it doesn't exist
             SG_ID=$(aws ec2 describe-security-groups \
-              --filters "Name=group-name,Values=my-app-sg" \
+              --filters "Name=resultportal,Values=resulportal-sg" \
               --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "none")
             if [ "$SG_ID" = "none" ]; then
               SG_ID=$(aws ec2 create-security-group \
-                --group-name my-app-sg --description "Security group for my app" \
+                --resultportal resulportal-sg --description "Security group for my app" \
                 --query "GroupId" --output text)
               aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 22 --cidr 0.0.0.0/0
               aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 80 --cidr 0.0.0.0/0
@@ -105,8 +105,8 @@ jobs:
       # Check and create ALB
       - name: Ensure ALB Exists
         run: |
-          ALB_NAME="my-app-alb"
-          TG_NAME="my-app-tg"
+          ALB_NAME="resultportal-alb"
+          TG_NAME="resultportal-tg"
           
           # Check if ALB exists
           ALB_ARN=$(aws elbv2 describe-load-balancers \
@@ -124,7 +124,7 @@ jobs:
             
             # Create ALB
             ALB_ARN=$(aws elbv2 create-load-balancer \
-              --name "$ALB_NAME" --subnets subnet-12345678 subnet-87654321  # Replace with your subnet IDs
+              --name "$ALB_NAME" --subnets subnet-02807132338e8d846 subnet-0644294eda505016f  # Replace with your subnet IDs
               --security-groups ${{ env.SG_ID }} \
               --scheme internet-facing \
               --query "LoadBalancers[0].LoadBalancerArn" --output text)
