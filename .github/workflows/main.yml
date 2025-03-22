@@ -10,96 +10,77 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Install AWS CLI
-      - name: AWS CLI v2
-        uses: imehedi/actions-awscli-v2@latest
-        with:
-          args: s3 ls
-        env:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-        
-
-      # Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 
+          aws-region: us-east-1
 
-      # Check and create S3 bucket
       - name: Ensure S3 Bucket Exists
         run: |
           BUCKET_NAME=${{ secrets.S3_BUCKET }}
-          if ! aws s3 ls "s3://$BUCKET_NAME" 2>&1 | grep -q 'NoSuchBucket'; then
-            echo "S3 bucket $BUCKET_NAME already exists"
-          else
+          if aws s3 ls "s3://$BUCKET_NAME" 2>&1 | grep -q 'NoSuchBucket'; then
             aws s3 mb "s3://$BUCKET_NAME" --region us-east-1
             echo "Created S3 bucket $BUCKET_NAME"
+          else
+            echo "S3 bucket $BUCKET_NAME already exists"
           fi
 
-      # Check and create EC2 instance
       - name: Ensure EC2 Instance Exists
         run: |
           INSTANCE_NAME="resultportal-ec2"
-          # Check if instance exists with tag
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running" \
             --query "Reservations[0].Instances[0].InstanceId" --output text 2>/dev/null || echo "none")
           
           if [ "$INSTANCE_ID" != "none" ]; then
             echo "EC2 instance $INSTANCE_NAME already exists: $INSTANCE_ID"
-            echo "EC2_HOST=$INSTANCE_ID" >> $GITHUB_ENV
+            echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
           else
-            # Create security group if it doesn't exist
             SG_ID=$(aws ec2 describe-security-groups \
-              --filters "Name=resultportal,Values=resulportal-sg" \
+              --filters "Name=group-name,Values=resultportal-sg" \
               --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "none")
             if [ "$SG_ID" = "none" ]; then
               SG_ID=$(aws ec2 create-security-group \
-                --resultportal resulportal-sg --description "Security group for my app" \
+                --group-name resultportal-sg --description "Security group for my app" \
+                --vpc-id ${{ secrets.VPC_ID }} \
                 --query "GroupId" --output text)
               aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 22 --cidr 0.0.0.0/0
               aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 80 --cidr 0.0.0.0/0
+              echo "SG_ID=$SG_ID" >> $GITHUB_ENV
+            else
+              echo "SG_ID=$SG_ID" >> $GITHUB_ENV
             fi
-
-            # Launch EC2 instance (t2.micro, Amazon Linux 2)
             INSTANCE_ID=$(aws ec2 run-instances \
-              --image-id ami-0e86e20dae9224db8  # Amazon Linux 2 AMI (us-east-1, update as needed)
+              --image-id ami-0e86e20dae9224db8 \
               --instance-type t2.micro \
-              --key-name ${{ secrets.EC2_KEY_NAME }}  # Add EC2 key pair name to secrets
+              --key-name ${{ secrets.EC2_KEY_NAME }} \
               --security-group-ids $SG_ID \
               --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME}]" \
               --query "Instances[0].InstanceId" --output text)
-            
-            # Wait for instance to be running
             aws ec2 wait instance-running --instance-ids $INSTANCE_ID
             echo "Created EC2 instance: $INSTANCE_ID"
-
-            # Get public IP
+            echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
             EC2_HOST=$(aws ec2 describe-instances \
               --instance-ids $INSTANCE_ID \
               --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
             echo "EC2_HOST=$EC2_HOST" >> $GITHUB_ENV
           fi
 
-      # Install Docker on EC2 if not present
       - name: Install Docker on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
           script: |
             if ! command -v docker &> /dev/null; then
               sudo yum update -y
@@ -108,13 +89,10 @@ jobs:
               sudo usermod -a -G docker ec2-user
             fi
 
-      # Check and create ALB
       - name: Ensure ALB Exists
         run: |
           ALB_NAME="resultportal-alb"
           TG_NAME="resultportal-tg"
-          
-          # Check if ALB exists
           ALB_ARN=$(aws elbv2 describe-load-balancers \
             --names "$ALB_NAME" \
             --query "LoadBalancers[0].LoadBalancerArn" --output text 2>/dev/null || echo "none")
@@ -122,46 +100,34 @@ jobs:
           if [ "$ALB_ARN" != "none" ]; then
             echo "ALB $ALB_NAME already exists"
           else
-            # Create target group
             TG_ARN=$(aws elbv2 create-target-group \
-              --name "$TG_NAME" --protocol HTTP --port 80 --vpc-id vpc-0c0c0b6b  # Replace with your VPC ID
+              --name "$TG_NAME" --protocol HTTP --port 80 --vpc-id ${{ secrets.VPC_ID }} \
               --target-type instance \
+              --health-check-protocol HTTP --health-check-path / --health-check-interval-seconds 30 \
               --query "TargetGroups[0].TargetGroupArn" --output text)
-            
-            # Create ALB
             ALB_ARN=$(aws elbv2 create-load-balancer \
-              --name "$ALB_NAME" --subnets subnet-02807132338e8d846 subnet-0644294eda505016f  # Replace with your subnet IDs
+              --name "$ALB_NAME" --subnets ${{ secrets.SUBNET_1 }} ${{ secrets.SUBNET_2 }} \
               --security-groups ${{ env.SG_ID }} \
               --scheme internet-facing \
               --query "LoadBalancers[0].LoadBalancerArn" --output text)
-            
-            # Wait for ALB to be active
             aws elbv2 wait load-balancer-available --load-balancer-arns $ALB_ARN
-            
-            # Register EC2 instance with target group
             aws elbv2 register-targets \
               --target-group-arn $TG_ARN \
-              --targets Id=${{ env.EC2_HOST }}
-            
-            # Create listener
+              --targets Id=${{ env.INSTANCE_ID }}
             aws elbv2 create-listener \
               --load-balancer-arn $ALB_ARN \
               --protocol HTTP --port 80 \
               --default-actions Type=forward,TargetGroupArn=$TG_ARN
           fi
-          
-          # Get ALB DNS name
           ALB_DNS=$(aws elbv2 describe-load-balancers \
             --load-balancer-arns $ALB_ARN \
             --query "LoadBalancers[0].DNSName" --output text)
           echo "ALB_DNS=$ALB_DNS" >> $GITHUB_ENV
 
-      # Log in to Azure Container Registry
       - name: Log in to ACR
         run: |
           echo "${{ secrets.AZURE_ACR_PASSWORD }}" | docker login ${{ secrets.AZURE_ACR_LOGIN_SERVER }} -u ${{ secrets.AZURE_ACR_USERNAME }} --password-stdin
 
-      # Build and push Docker image to ACR
       - name: Build and push to ACR
         uses: docker/build-push-action@v5
         with:
@@ -170,17 +136,15 @@ jobs:
           push: true
           tags: ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/your-app:latest
 
-      # Deploy to EC2 via SSH
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
           script: |
-            # Log in to ACR from EC2
             echo "${{ secrets.AZURE_ACR_PASSWORD }}" | docker login ${{ secrets.AZURE_ACR_LOGIN_SERVER }} -u ${{ secrets.AZURE_ACR_USERNAME }} --password-stdin
-            # Pull and run the container
             docker pull ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/your-app:latest
             docker stop your-app-container || true
             docker rm your-app-container || true
@@ -190,7 +154,6 @@ jobs:
               -e S3_BUCKET=${{ secrets.S3_BUCKET }} \
               ${{ secrets.AZURE_ACR_LOGIN_SERVER }}/your-app:latest
 
-      # Output ALB DNS
       - name: Output ALB URL
         run: |
           echo "Application is available at: http://${{ env.ALB_DNS }}"
