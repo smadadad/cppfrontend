@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useToast } from "@chakra-ui/react";
+import { Box, Heading, Table, Thead, Tr, Th, Tbody, Td, useToast } from "@chakra-ui/react";
 import { getStudentResults } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
@@ -42,5 +42,43 @@ export default function StudentDashboard() {
     fetchResults();
   }, [router, fetchResults]);
 
-  return <div>{/* Render results */}</div>;
+  return (
+    <Box maxW="7xl" mx="auto" px={4} py={8}>
+      <Heading as="h2" size="xl" mb={6}>
+        Student Dashboard
+      </Heading>
+      <Box bg="white" shadow="md" rounded="lg" overflow="hidden">
+        <Table variant="simple">
+          <Thead bg="gray.50">
+            <Tr>
+              <Th textTransform="uppercase" fontSize="xs" color="gray.500">
+                Student ID
+              </Th>
+              <Th textTransform="uppercase" fontSize="xs" color="gray.500">
+                Subject
+              </Th>
+              <Th textTransform="uppercase" fontSize="xs" color="gray.500">
+                Score
+              </Th>
+              <Th textTransform="uppercase" fontSize="xs" color="gray.500">
+                Grade
+              </Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {results.map((result, index) => (
+              <Tr key={index}>
+                <Td fontSize="sm" fontWeight="medium">
+                  {result.student_id}
+                </Td>
+                <Td fontSize="sm">{result.subject}</Td>
+                <Td fontSize="sm">{result.score}</Td>
+                <Td fontSize="sm">{result.grade}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
+    </Box>
+  );
 }
