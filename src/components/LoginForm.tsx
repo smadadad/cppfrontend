@@ -11,7 +11,8 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext"; // Updated
+import { useAuth } from "@/context/AuthContext";
+import { AxiosError } from "axios"; // Added
 
 interface LoginFormProps {
   userType: "STUDENT" | "STAFF" | "ADMIN";
@@ -24,13 +25,13 @@ export default function LoginForm({ userType, redirectPath }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const toast = useToast();
-  const { login } = useAuth(); // Use context login
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(username, password, userType); // Call context login
+      await login(username, password, userType);
       toast({
         title: "Login successful",
         description: `Logged in as ${userType.toLowerCase()}`,
@@ -39,10 +40,11 @@ export default function LoginForm({ userType, redirectPath }: LoginFormProps) {
         isClosable: true,
       });
       router.push(redirectPath);
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials",
+        description: axiosError.message || "Invalid credentials",
         status: "error",
         duration: 3000,
         isClosable: true,
