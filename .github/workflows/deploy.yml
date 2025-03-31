@@ -1,0 +1,55 @@
+name: Build and Deploy React to S3
+
+on:
+#  push:
+ #   branches:
+#      - main  # Trigger on push to main branch
+  pull_request:
+    branches:
+      - main  # Trigger on pull requests to main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout the code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Set up Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Specify your preferred Node.js version
+          cache: 'npm'       # Cache npm dependencies
+
+      # Install dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # Build the React application
+      - name: Build
+        run: npm run build
+        env:
+          CI: false  # Optional: prevents treating warnings as errors
+
+      # Configure AWS Credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1  # Change to your preferred AWS region
+
+      # Deploy to S3
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./build/ s3://your-bucket-name/ --delete
+          
+      # Optional: Invalidate CloudFront cache (uncomment if using CloudFront)
+      # - name: Invalidate CloudFront
+      #   run: |
+      #     aws cloudfront create-invalidation \
+      #       --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+      #       --paths "/*"
