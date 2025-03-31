@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react"; // Added useEffect for protection
+import { useState, useEffect } from "react";
 import {
   Box,
   Heading,
@@ -9,12 +9,12 @@ import {
   FormLabel,
   Input,
   Button,
-  Text,
   useToast,
   Link,
-} from "@chakra-ui/react";
+} from "@chakra-ui/react"; // Removed unused Text import
 import { uploadStaff, uploadStudents } from "@/utils/api";
-import { useRouter } from "next/navigation"; // Added for protection
+import { useRouter } from "next/navigation";
+import { AxiosError } from "axios"; // Added for error typing
 
 export default function AdminDashboard() {
   const [staffFile, setStaffFile] = useState<File | null>(null);
@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const toast = useToast();
-  const router = useRouter(); // Added for protection
+  const router = useRouter();
 
   useEffect(() => {
     // Check if logged in
@@ -55,10 +55,13 @@ export default function AdminDashboard() {
         isClosable: true,
       });
       setStaffFile(null);
-    } catch (error: any) {
+    } catch (error) {
+      // Typed as AxiosError with optional response data
+      const axiosError = error as AxiosError<{ message?: string }>;
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload staff data",
+        description:
+          axiosError.response?.data?.message || axiosError.message || "Failed to upload staff data",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -92,10 +95,13 @@ export default function AdminDashboard() {
         isClosable: true,
       });
       setStudentFile(null);
-    } catch (error: any) {
+    } catch (error) {
+      // Typed as AxiosError with optional response data
+      const axiosError = error as AxiosError<{ message?: string }>;
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload student data",
+        description:
+          axiosError.response?.data?.message || axiosError.message || "Failed to upload student data",
         status: "error",
         duration: 3000,
         isClosable: true,
