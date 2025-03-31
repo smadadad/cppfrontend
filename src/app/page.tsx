@@ -14,14 +14,14 @@ interface Result {
 }
 
 export default function StudentDashboard() {
-  const [results, setResults] = useState<Result[]>([]);
+  const [results, setResults] = useState<Result[]>([]); // Line 17: results defined here
   const toast = useToast();
   const router = useRouter();
 
   const fetchResults = useCallback(async () => {
     try {
       const response = await getStudentResults();
-      setResults(response.data.results);
+      setResults(response.data.results); // Assigned and now used below
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;
       toast({
