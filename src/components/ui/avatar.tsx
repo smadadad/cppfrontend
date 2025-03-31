@@ -1,13 +1,14 @@
 import {
   Avatar as ChakraAvatar,
-  AvatarProps as ChakraAvatarProps, // Import the correct props type
+  AvatarProps as ChakraAvatarProps,
   AvatarGroup as ChakraAvatarGroup,
 } from "@chakra-ui/react";
+import Image from "next/image"; // Added
 import * as React from "react";
 
 type ImageProps = React.ImgHTMLAttributes<HTMLImageElement>;
 
-export interface AvatarProps extends ChakraAvatarProps { // Use ChakraAvatarProps
+export interface AvatarProps extends ChakraAvatarProps {
   name?: string;
   src?: string;
   srcSet?: string;
@@ -22,7 +23,16 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
     return (
       <ChakraAvatar ref={ref} name={name} src={src} {...rest}>
         {icon || fallback || <ChakraAvatar />}
-        {src && <img src={src} srcSet={srcSet} loading={loading} alt={name} />}
+        {src && (
+          <Image
+            src={src}
+            alt={name || "Avatar"}
+            width={40} // Required by next/image; adjust based on your design
+            height={40} // Required by next/image; adjust based on your design
+            {...(srcSet ? { srcSet } : {})}
+            loading={loading}
+          />
+        )}
         {children}
       </ChakraAvatar>
     );
