@@ -4,7 +4,7 @@ const API_URL = "https://mock-api.example.com/api";
 // Mock axios-like response structure
 const mockResponse = <T>(data: T) => ({ data });
 
-// Mock token interceptor
+// Mock token interceptor (used in getStudentResults as an example)
 const getAuthHeaders = () => {
   const token = localStorage.getItem("access_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -12,6 +12,8 @@ const getAuthHeaders = () => {
 
 // Student Results
 export const getStudentResults = async () => {
+  const headers = getAuthHeaders(); // Use getAuthHeaders
+  console.log(`Fetching student results from ${API_URL}/results`, headers); // Use API_URL
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({
     results: [
@@ -23,6 +25,7 @@ export const getStudentResults = async () => {
 
 // Upload Results
 export const uploadResults = async (file: File) => {
+  console.log(`Uploading results file: ${file.name}`); // Use file
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({ message: "Results uploaded successfully" });
 };
@@ -40,6 +43,7 @@ export const getAllResults = async () => {
 
 // Submit Complaint
 export const submitComplaint = async (subject: string, content: string) => {
+  console.log(`Submitting complaint - Subject: ${subject}, Content: ${content}`); // Use subject and content
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({ message: "Complaint submitted successfully" });
 };
@@ -55,18 +59,21 @@ export const getComplaints = async () => {
 
 // Resolve Complaint
 export const resolveComplaint = async (complaintId: string) => {
+  console.log(`Resolving complaint ID: ${complaintId}`); // Use complaintId
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({ message: "Complaint resolved" });
 };
 
 // Upload Staff
 export const uploadStaff = async (file: File) => {
+  console.log(`Uploading staff file: ${file.name}`); // Use file
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({ message: "Staff uploaded successfully" });
 };
 
 // Upload Students
 export const uploadStudents = async (file: File) => {
+  console.log(`Uploading students file: ${file.name}`); // Use file
   await new Promise((resolve) => setTimeout(resolve, 500));
   return mockResponse({ message: "Students uploaded successfully" });
 };
