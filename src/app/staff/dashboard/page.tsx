@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Added useCallback
 import {
   Box,
   Heading,
@@ -20,7 +20,8 @@ import {
   Link,
 } from "@chakra-ui/react";
 import { uploadResults, getAllResults, getComplaints, resolveComplaint } from "@/utils/api";
-import { useRouter } from "next/navigation"; // Added for protection
+import { useRouter } from "next/navigation";
+import { AxiosError } from "axios"; // Added for error typing
 
 interface Result {
   student_id: string;
@@ -44,7 +45,30 @@ export default function StaffDashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
-  const router = useRouter(); // Added for protection
+  const router = useRouter();
+
+  // Wrap fetchData in useCallback to stabilize it as a dependency
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const resultsResponse = await getAllResults();
+      setResults(resultsResponse.data.results);
+      const complaintsResponse = await getComplaints();
+      setComplaints(complaintsResponse.data);
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      toast({
+        title: "Fetch failed",
+        description:
+          axiosError.response?.data?.message || axiosError.message || "Failed to fetch data. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]); // Dependencies for fetchData
 
   useEffect(() => {
     // Check if logged in
@@ -53,27 +77,7 @@ export default function StaffDashboard() {
       return;
     }
     fetchData();
-  }, [router]);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const resultsResponse = await getAllResults();
-      setResults(resultsResponse.data.results);
-      const complaintsResponse = await getComplaints();
-      setComplaints(complaintsResponse.data);
-    } catch (error: any) {
-      toast({
-        title: "Fetch failed",
-        description: error.message || "Failed to fetch data. Please try again.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [router, fetchData]); // Added fetchData to dependency array
 
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -100,10 +104,12 @@ export default function StaffDashboard() {
       });
       setFile(null);
       fetchData();
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload results.",
+        description:
+          axiosError.response?.data?.message || axiosError.message || "Failed to upload results.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -125,10 +131,12 @@ export default function StaffDashboard() {
         isClosable: true,
       });
       fetchData();
-    } catch (error: any) {
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
       toast({
         title: "Resolve failed",
-        description: error.message || "Failed to resolve complaint.",
+        description:
+          axiosError.response?.data?.message || axiosError.message || "Failed to resolve complaint.",
         status: "error",
         duration: 3000,
         isClosable: true,
