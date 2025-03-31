@@ -1,34 +1,32 @@
 import {
   Avatar as ChakraAvatar,
+  AvatarProps as ChakraAvatarProps, // Import the correct props type
   AvatarGroup as ChakraAvatarGroup,
-} from "@chakra-ui/react"
-import * as React from "react"
+} from "@chakra-ui/react";
+import * as React from "react";
 
-type ImageProps = React.ImgHTMLAttributes<HTMLImageElement>
+type ImageProps = React.ImgHTMLAttributes<HTMLImageElement>;
 
-export interface AvatarProps extends ChakraAvatar.RootProps {
-  name?: string
-  src?: string
-  srcSet?: string
-  loading?: ImageProps["loading"]
-  icon?: React.ReactElement
-  fallback?: React.ReactNode
+export interface AvatarProps extends ChakraAvatarProps { // Use ChakraAvatarProps
+  name?: string;
+  src?: string;
+  srcSet?: string;
+  loading?: ImageProps["loading"];
+  icon?: React.ReactElement;
+  fallback?: React.ReactNode;
 }
 
 export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   function Avatar(props, ref) {
-    const { name, src, srcSet, loading, icon, fallback, children, ...rest } =
-      props
+    const { name, src, srcSet, loading, icon, fallback, children, ...rest } = props;
     return (
-      <ChakraAvatar.Root ref={ref} {...rest}>
-        <ChakraAvatar.Fallback name={name}>
-          {icon || fallback}
-        </ChakraAvatar.Fallback>
-        <ChakraAvatar.Image src={src} srcSet={srcSet} loading={loading} />
+      <ChakraAvatar ref={ref} name={name} src={src} {...rest}>
+        {icon || fallback || <ChakraAvatar />}
+        {src && <img src={src} srcSet={srcSet} loading={loading} alt={name} />}
         {children}
-      </ChakraAvatar.Root>
-    )
+      </ChakraAvatar>
+    );
   },
-)
+);
 
-export const AvatarGroup = ChakraAvatarGroup
+export const AvatarGroup = ChakraAvatarGroup;
