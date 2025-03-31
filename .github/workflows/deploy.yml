@@ -1,12 +1,12 @@
-name: Build and Deploy React to S3
+name: Build and Deploy Next.js to S3
 
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - main
   pull_request:
     branches:
-      - main  # Trigger on pull requests to main branch
+      - main
 
 jobs:
   build-and-deploy:
@@ -21,18 +21,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  # Specify your preferred Node.js version
-          cache: 'npm'       # Cache npm dependencies
+          node-version: '18'  # Matches your environment
+          cache: 'npm'
 
       # Install dependencies
       - name: Install Dependencies
         run: npm ci
 
-      # Build the React application
-      - name: Build
-        run: npm run build
+      # Build the Next.js application
+      - name: Build and Export
+        run: |
+          npm run build
+          npm run export
         env:
-          CI: false  # Optional: prevents treating warnings as errors
+          CI: false  # Prevents warnings from failing the build
 
       # Configure AWS Credentials
       - name: Configure AWS Credentials
@@ -40,10 +42,10 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1  # Change to your preferred AWS region
+          aws-region: us-east-1  # Adjust to your region
 
       # Deploy to S3
       - name: Deploy to S3
         run: |
-          aws s3 sync ./build/ s3://resultappbucket/ --delete
-          
+          aws s3 sync ./out/ s3://your-bucket-name/ --delete
+          # Optional: --acl public-read for public access
